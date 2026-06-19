@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小说写作助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ===== 侧边栏 ===== */
+        .sidebar {
+            width: 280px;
+            background: #16213e;
+            border-right: 1px solid #0f3460;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #0f3460;
+        }
+        .sidebar-header h1 {
+            font-size: 18px;
+            color: #e94560;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-family: inherit;
+            outline: none;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+        .btn-primary:hover { background: #c73e54; }
+        .btn-secondary {
+            background: #0f3460;
+            color: #e0e0e0;
+        }
+        .btn-secondary:hover { background: #1a4a7a; }
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+        .btn-success:hover { background: #27ae60; }
+
+        .chapter-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .chapter-item {
+            padding: 12px 15px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            position: relative;
+            border: 1px solid transparent;
+        }
+        .chapter-item:hover {
+            background: #0f3460;
+            border-color: #1a4a7a;
+        }
+        .chapter-item.active {
+            background: #e94560;
+            color: white;
+            border-color: #c73e54;
+        }
+        .chapter-item .chapter-num {
+            font-size: 12px;
+            opacity: 0.7;
+            min-width: 30px;
+            font-weight: bold;
+        }
+        .chapter-item .chapter-title {
+            flex: 1;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chapter-item .chapter-actions {
+            display: none;
+            gap: 4px;
+        }
+        .chapter-item:hover .chapter-actions,
+        .chapter-item.active .chapter-actions {
+            display: flex;
+        }
+        .icon-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: rgba(255,255,255,0.15);
+            color: inherit;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .add-chapter-btn {
+            padding: 12px;
+            margin: 10px;
+            border: 2px dashed #0f3460;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            color: #e94560;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .add-chapter-btn:hover {
+            border-color: #e94560;
+            background: rgba(233, 69, 96, 0.1);
+        }
+
+        .sidebar-footer {
+            padding: 15px;
+            border-top: 1px solid #0f3460;
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+        }
+        .sidebar-footer .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        /* ===== 主编辑区 ===== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0f0f23;
+            min-width: 0;
+        }
+        .toolbar {
+            padding: 12px 20px;
+            border-bottom: 1px solid #1a1a3e;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #16213e;
+            flex-shrink: 0;
+        }
+        .toolbar .file-info {
+            flex: 1;
+            font-size: 14px;
+            color: #aaa;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .toolbar .file-info span {
+            color: #e94560;
+            font-weight: bold;
+        }
+        .toolbar .stats {
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .chapter-title-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #0f3460;
+            color: #e0e0e0;
+            font-size: 22px;
+            font-weight: bold;
+            padding: 10px 0;
+            margin-bottom: 15px;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+        .chapter-title-input:focus {
+            border-bottom-color: #e94560;
+        }
+        .chapter-title-input::placeholder {
+            color: #555;
+        }
+        .editor {
+            flex: 1;
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #e0e0e0;
+            resize: none;
+            outline: none;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            tab-size: 4;
+        }
+        .editor:focus {
+            border-color: #e94560;
+            box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.1);
+        }
+        .editor::placeholder {
+            color: #444;
+        }
+
+        .status-bar {
+            padding: 8px 20px;
+            background: #16213e;
+            border-top: 1px solid #0f3460;
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .status-bar .saved-indicator { color: #2ecc71; }
+        .status-bar .unsaved-indicator {
+            color: #e94560;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ===== 空状态 ===== */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #555;
+            text-align: center;
+            padding: 40px;
+        }
+        .empty-state .big-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #777;
+        }
+        .empty-state p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .empty-state .quick-actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        /* ===== 模态框 ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 30px;
+            width: 420px;
+            max-width: 90%;
+            border: 1px solid #0f3460;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: modalIn 0.2s ease-out;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #e94560;
+            font-size: 18px;
+        }
+        .modal input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 20px;
+            outline: none;
+            font-family: inherit;
+        }
+        .modal input:focus {
+            border-color: #e94560;
+        }
+        .modal .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* ===== 滚动条 ===== */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #16213e; }
+        ::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #e94560; }
+
+        /* ===== 拖拽区域 ===== */
+        .drag-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(233, 69, 96, 0.2);
+            border: 3px dashed #e94560;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            font-size: 24px;
+            color: #e94560;
+            pointer-events: none;
+        }
+        .drag-overlay.active { display: flex; }
+
+        /* ===== 提示 toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #16213e;
+            border: 1px solid #0f3460;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 14px;
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        .toast.success { border-left: 4px solid #2ecc71; }
+        .toast.error { border-left: 4px solid #e94560; }
+        .toast.info { border-left: 4px solid #3498db; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>📚 小说写作助手</h1>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="createNovel()">📖 新建</button>
+                    <button class="btn btn-secondary" onclick="openNovel()">📂 打开</button>
+                    <button class="btn btn-success" onclick="saveNovel()">💾 保存</button>
+                </div>
+            </div>
+            <div class="chapter-list" id="chapterList"></div>
+            <div class="add-chapter-btn" onclick="addChapter()">+ 新建章节</div>
+            <div class="sidebar-footer">
+                <div class="stat-row"><span>总章节</span><span id="totalChapters">0</span></div>
+                <div class="stat-row"><span>总字数</span><span id="wordCountTotal">0</span></div>
+            </div>
+        </div>
+
+        <!-- 主编辑区 -->
+        <div class="main">
+            <div class="toolbar">
+                <div class="file-info">
+                    当前: <span id="currentFile">未命名小说</span>
+                </div>
+                <div class="stats">
+                    <span id="chapterWordCount">本章: 0字</span>
+                    <span id="cursorPosition">行 1, 列 1</span>
+                </div>
+            </div>
+            <div class="editor-container" id="editorContainer">
+                <div class="empty-state" id="emptyState">
+                    <div class="big-icon">✍️</div>
+                    <h2>欢迎使用小说写作助手</h2>
+                    <p>点击「新建」开始创作，或「打开」导入已有TXT文件<br>支持拖拽TXT文件到窗口直接打开</p>
+                    <div class="quick-actions">
+                        <button class="btn btn-primary" onclick="createNovel()">开始创作</button>
+                        <button class="btn btn-secondary" onclick="openNovel()">导入小说</button>
+                    </div>
+                </div>
+                <div id="editorArea" style="display:none; flex-direction:column; height:100%;">
+                    <input type="text" class="chapter-title-input" id="chapterTitle" placeholder="输入章节标题..." oninput="updateCurrentChapter()">
+                    <textarea class="editor" id="editor" placeholder="开始写作...（Tab键缩进，Ctrl+S保存）" oninput="onEditorInput()" onkeydown="handleKeyDown(event)" onkeyup="updateCursorPosition()"></textarea>
+                </div>
+            </div>
+            <div class="status-bar">
+                <span id="saveStatus">准备就绪</span>
+                <span id="autoSaveStatus"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建小说模态框 -->
+    <div class="modal-overlay" id="newNovelModal">
+        <div class="modal">
+            <h3>📖 新建小说</h3>
+            <input type="text" id="novelNameInput" placeholder="输入小说名称..." onkeydown="if(event.key==='Enter')confirmNewNovel()">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('newNovelModal')">取消</button>
+                <button class="btn btn-primary" onclick="confirmNewNovel()">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 拖拽提示 -->
+    <div class="drag-overlay" id="dragOverlay">
+        <div>📂 释放以打开文件</div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const fs = require('fs');
+        const path = require('path');
+
+        // ===== 数据 =====
+        let novel = { name: '', chapters: [], currentChapterIndex: -1 };
+        let isModified = false;
+        let autoSaveTimer = null;
+        let currentFilePath = null;
+
+        // ===== 初始化 =====
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromDisk();
+            setupDragDrop();
+            setupIpcListeners();
+        });
+
+        function setupIpcListeners() {
+            ipcRenderer.on('menu-new', () => createNovel());
+            ipcRenderer.on('menu-open', (e, data) => {
+                parseNovelContent(data.name, data.content);
+                currentFilePath = data.path;
+            });
+            ipcRenderer.on('menu-save', () => saveNovel());
+            ipcRenderer.on('menu-save-as', () => saveNovel(true));
+            ipcRenderer.on('menu-add-chapter', () => addChapter());
+            ipcRenderer.on('menu-delete-chapter', () => {
+                if (novel.currentChapterIndex >= 0) deleteChapter(novel.currentChapterIndex);
+            });
+            ipcRenderer.on('menu-prev-chapter', () => {
+                if (novel.currentChapterIndex > 0) switchChapter(novel.currentChapterIndex - 1);
+            });
+            ipcRenderer.on('menu-next-chapter', () => {
+                if (novel.currentChapterIndex < novel.chapters.length - 1) switchChapter(novel.currentChapterIndex + 1);
+            });
+            ipcRenderer.on('save-result', (e, result) => {
+                if (result.success) {
+                    isModified = false;
+                    currentFilePath = result.path;
+                    updateSaveStatus();
+                    showToast('保存成功！', 'success');
+                    saveToDisk();
+                } else {
+                    showToast('保存失败: ' + result.error, 'error');
+                }
+            });
+        }
+
+        // ===== 文件操作 =====
+        function createNovel() {
+            if (isModified && !confirm('当前有未保存的更改，确定要新建吗？')) return;
+            document.getElementById('novelNameInput').value = '';
+            showModal('newNovelModal');
+            setTimeout(() => document.getElementById('novelNameInput').focus(), 100);
+        }
+
+        function confirmNewNovel() {
+            const name = document.getElementById('novelNameInput').value.trim();
+            if (!name) { alert('请输入小说名称'); return; }
+            novel = { name, chapters: [{ title: '第一章', content: '' }], currentChapterIndex: 0 };
+            isModified = false; currentFilePath = null;
+            document.getElementById('currentFile').textContent = name;
+            closeModal('newNovelModal');
+            renderChapterList(); loadChapter(0);
+            showToast('新建小说成功', 'success');
+            saveToDisk();
+        }
+
+        function openNovel() {
+            // 通过菜单触发主进程对话框
+        }
+
+        function saveNovel(forceSaveAs = false) {
+            if (novel.chapters.length === 0) { showToast('没有内容可保存', 'error'); return; }
+            saveCurrentChapter();
+            let fullContent = '';
+            novel.chapters.forEach(ch => {
+                fullContent += ch.title + '\n' + '='.repeat(40) + '\n\n' + ch.content + '\n\n';
+            });
+            ipcRenderer.send('save-file', {
+                filePath: forceSaveAs ? null : currentFilePath,
+                content: fullContent,
+                defaultName: (novel.name || '未命名小说') + '.txt'
+            });
+        }
+
+        // ===== 解析TXT =====
+        function parseNovelContent(name, content) {
+            if (isModified && !confirm('当前有未保存的更改，确定要打开新文件吗？')) return;
+            const patterns = [
+                /第[一二三四五六七八九十百千万零\d]+章[：:\s]+[^\n]+/g,
+                /Chapter\s+\d+[：:\s]+[^\n]+/gi,
+                /\d+\.\s*[^\n]+/g,
+                /第\d+章[：:\s]+[^\n]+/g
+            ];
+            let chapters = [], matched = false;
+            for (let pattern of patterns) {
+                const matches = [...content.matchAll(pattern)];
+                if (matches.length > 1) {
+                    matched = true;
+                    for (let i = 0; i < matches.length; i++) {
+                        const start = matches[i].index;
+                        const end = (i < matches.length - 1) ? matches[i+1].index : content.length;
+                        const chapterContent = content.substring(start, end).trim();
+                        const titleMatch = chapterContent.match(/^.*/);
+                        const title = titleMatch ? titleMatch[0].trim() : `第${i+1}章`;
+                        const body = chapterContent.substring(title.length).trim();
+                        chapters.push({ title, content: body });
+                    }
+                    break;
+                }
+            }
+            if (!matched || chapters.length === 0) {
+                chapters = [{ title: '第一章', content: content.trim() }];
+            }
+            novel = { name, chapters, currentChapterIndex: 0 };
+            document.getElementById('currentFile').textContent = name;
+            renderChapterList(); loadChapter(0);
+            isModified = false; currentFilePath = null;
+            showToast(`成功导入 ${chapters.length} 个章节`, 'success');
+            saveToDisk();
+        }
+
+        // ===== 章节管理 =====
+        function renderChapterList() {
+            const list = document.getElementById('chapterList');
+            list.innerHTML = '';
+            novel.chapters.forEach((ch, index) => {
+                const item = document.createElement('div');
+                item.className = 'chapter-item' + (index === novel.currentChapterIndex ? ' active' : '');
+                item.onclick = () => switchChapter(index);
+                item.innerHTML = `
+                    <span class="chapter-num">${index + 1}</span>
+                    <span class="chapter-title">${escapeHtml(ch.title)}</span>
+                    <div class="chapter-actions">
+                        <button class="icon-btn" onclick="event.stopPropagation(); moveChapter(${index}, -1)" title="上移">↑</button>
+                        <button class="icon-btn" onclick="event.stopPropagation(); moveChapter(${index}, 1)" title="下移">↓</button>
+                        <button class="icon-btn" onclick="event.stopPropagation(); deleteChapter(${index})" title="删除">×</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            document.getElementById('totalChapters').textContent = novel.chapters.length;
+            updateTotalWordCount();
+        }
+
+        function switchChapter(index) {
+            if (index === novel.currentChapterIndex) return;
+            saveCurrentChapter();
+            loadChapter(index);
+        }
+
+        function loadChapter(index) {
+            if (index < 0 || index >= novel.chapters.length) return;
+            novel.currentChapterIndex = index;
+            const ch = novel.chapters[index];
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('editorArea').style.display = 'flex';
+            document.getElementById('chapterTitle').value = ch.title;
+            document.getElementById('editor').value = ch.content;
+            renderChapterList();
+            updateChapterWordCount();
+            updateSaveStatus();
+            document.getElementById('editor').focus();
+        }
+
+        function saveCurrentChapter() {
+            if (novel.currentChapterIndex >= 0 && novel.currentChapterIndex < novel.chapters.length) {
+                const title = document.getElementById('chapterTitle').value.trim();
+                const content = document.getElementById('editor').value;
+                novel.chapters[novel.currentChapterIndex].title = title || `第${novel.currentChapterIndex + 1}章`;
+                novel.chapters[novel.currentChapterIndex].content = content;
+            }
+        }
+
+        function updateCurrentChapter() {
+            if (novel.currentChapterIndex >= 0) {
+                novel.chapters[novel.currentChapterIndex].title = document.getElementById('chapterTitle').value;
+                renderChapterList();
+                markModified();
+            }
+        }
+
+        function addChapter() {
+            saveCurrentChapter();
+            const newIndex = novel.chapters.length;
+            novel.chapters.push({ title: `第${newIndex + 1}章`, content: '' });
+            renderChapterList();
+            loadChapter(newIndex);
+            markModified();
+            showToast('新建章节成功', 'success');
+        }
+
+        function deleteChapter(index) {
+            if (!confirm(`确定要删除「${novel.chapters[index].title}」吗？\n此操作不可撤销！`)) return;
+            novel.chapters.splice(index, 1);
+            if (novel.chapters.length === 0) {
+                novel.currentChapterIndex = -1;
+                document.getElementById('emptyState').style.display = 'flex';
+                document.getElementById('editorArea').style.display = 'none';
+            } else if (novel.currentChapterIndex >= novel.chapters.length) {
+                loadChapter(novel.chapters.length - 1);
+            } else if (novel.currentChapterIndex === index) {
+                loadChapter(Math.min(index, novel.chapters.length - 1));
+            }
+            renderChapterList();
+            markModified();
+        }
+
+        function moveChapter(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= novel.chapters.length) return;
+            [novel.chapters[index], novel.chapters[newIndex]] = [novel.chapters[newIndex], novel.chapters[index]];
+            if (novel.currentChapterIndex === index) novel.currentChapterIndex = newIndex;
+            else if (novel.currentChapterIndex === newIndex) novel.currentChapterIndex = index;
+            renderChapterList();
+            markModified();
+        }
+
+        // ===== 编辑器 =====
+        function onEditorInput() {
+            updateChapterWordCount();
+            updateCursorPosition();
+            markModified();
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                saveCurrentChapter();
+                saveToDisk();
+                document.getElementById('autoSaveStatus').textContent = '已自动备份';
+                setTimeout(() => document.getElementById('autoSaveStatus').textContent = '', 2000);
+            }, 3000);
+        }
+
+        function markModified() {
+            isModified = true;
+            updateSaveStatus();
+        }
+
+        function updateSaveStatus() {
+            const status = document.getElementById('saveStatus');
+            if (isModified) status.innerHTML = '<span class="unsaved-indicator">● 未保存</span>';
+            else status.innerHTML = '<span class="saved-indicator">✓ 已保存</span>';
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const editor = document.getElementById('editor');
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 4;
+                onEditorInput();
+            }
+            setTimeout(updateCursorPosition, 0);
+        }
+
+        function updateCursorPosition() {
+            const editor = document.getElementById('editor');
+            const pos = editor.selectionStart;
+            const text = editor.value.substring(0, pos);
+            const lines = text.split('\n');
+            document.getElementById('cursorPosition').textContent = `行 ${lines.length}, 列 ${lines[lines.length-1].length + 1}`;
+        }
+
+        // ===== 统计 =====
+        function countWords(text) {
+            if (!text) return 0;
+            const cn = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+            const en = (text.match(/[a-zA-Z]+/g) || []).length;
+            return cn + en;
+        }
+
+        function updateChapterWordCount() {
+            const content = document.getElementById('editor').value;
+            document.getElementById('chapterWordCount').textContent = `本章: ${countWords(content)}字`;
+        }
+
+        function updateTotalWordCount() {
+            let total = 0;
+            novel.chapters.forEach(ch => total += countWords(ch.content));
+            document.getElementById('wordCountTotal').textContent = total.toLocaleString();
+        }
+
+        // ===== 本地持久化存储 =====
+        function getDataPath() {
+            return ipcRenderer.sendSync('get-app-data-path');
+        }
+
+        function saveToDisk() {
+            const dataPath = getDataPath();
+            const filePath = path.join(dataPath, 'backup.json');
+            ipcRenderer.sendSync('write-file', {
+                filePath: filePath,
+                content: JSON.stringify({ novel, currentFilePath, timestamp: Date.now() })
+            });
+        }
+
+        function loadFromDisk() {
+            const dataPath = getDataPath();
+            const filePath = path.join(dataPath, 'backup.json');
+            const exists = ipcRenderer.sendSync('file-exists', filePath);
+            if (!exists) return;
+            const result = ipcRenderer.sendSync('read-file', filePath);
+            if (!result.success) return;
+            try {
+                const data = JSON.parse(result.content);
+                if (data.novel && data.novel.chapters && data.novel.chapters.length > 0) {
+                    novel = data.novel;
+                    currentFilePath = data.currentFilePath || null;
+                    document.getElementById('currentFile').textContent = novel.name || '未命名小说';
+                    renderChapterList();
+                    if (novel.currentChapterIndex >= 0) loadChapter(novel.currentChapterIndex);
+                    showToast('已从本地恢复上次编辑', 'info');
+                }
+            } catch(e) {}
+        }
+
+        // ===== 拖拽打开 =====
+        function setupDragDrop() {
+            const overlay = document.getElementById('dragOverlay');
+            document.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                overlay.classList.add('active');
+            });
+            document.addEventListener('dragleave', (e) => {
+                if (e.target === document.body) overlay.classList.remove('active');
+            });
+            document.addEventListener('drop', (e) => {
+                e.preventDefault();
+                overlay.classList.remove('active');
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].name.endsWith('.txt')) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        parseNovelContent(files[0].name.replace('.txt', ''), ev.target.result);
+                    };
+                    reader.readAsText(files[0]);
+                } else {
+                    showToast('请拖拽TXT文件', 'error');
+                }
+            });
+        }
+
+        // ===== 工具函数 =====
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        function showModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast ' + type;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('active'); });
+        });
+
+        window.addEventListener('beforeunload', () => {
+            saveCurrentChapter();
+            saveToDisk();
+        });
+    </script>
+</body>
+</html>
